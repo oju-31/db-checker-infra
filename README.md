@@ -1,6 +1,6 @@
 # db-checker-infra
 
-Terraform infrastructure for the KoRo PHP visit logger coding test. The stack runs the provided PHP image on ECS Fargate with three replicas behind an Application Load Balancer, plus single-node MySQL and Redis containers for the data tier.
+The stack runs the provided PHP image on ECS Fargate with three replicas behind an Application Load Balancer, plus single-node MySQL and Redis containers for the data tier.
 
 ## Architecture
 
@@ -16,24 +16,16 @@ Terraform infrastructure for the KoRo PHP visit logger coding test. The stack ru
 - MySQL credentials are passed as plain ECS environment variables for this exercise.
 - CloudWatch Logs collects app, MySQL, and Redis container logs.
 
-MySQL and Redis are intentionally ephemeral in this practical deployment. Task replacement recreates their container filesystems and loses stored visit data. See [design.md](design.md) for the production HA proposal.
-
 ## Prerequisites
 
-- Terraform.
-- AWS CLI credentials for local deployment.
-- Existing S3 backend buckets:
-  - Dev: `db-checker-backend-aws-terraform-remote-state-centralized`
-  - Prod: `db-checker-aws-terraform-remote-state-centralized`
+- Existing S3 backend buckets (no dynamodb for now):
+  - Prod: `db-checker-aws-terraform-remote-state-centralized` 
 - GitHub Actions OIDC roles for CI/CD.
 
 The backend region and deployment region are both `us-east-2`.
 
 ## GitHub Actions Setup
-
-Create GitHub environments named `dev` and `prod`.
-
-Add these environment secrets:
+Create 
 
 - `GA_ROLE_ARN_DEV` in the `dev` environment.
 - `GA_ROLE_ARN_PROD` in the `prod` environment.
