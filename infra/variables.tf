@@ -49,3 +49,13 @@ variable "database_user" {
   type    = string
   default = "visit_logger"
 }
+
+variable "database_password" {
+  type    = string
+  default = "visit_logger_password"
+}
+
+variable "database_root_password" {
+  type    = string
+  default = "root_password"
+}

@@ -3,8 +3,6 @@ locals {
   namespace_name = "${var.RESOURCE_PREFIX}.local"
   mysql_dns      = "mysql.${local.namespace_name}"
   redis_dns      = "redis.${local.namespace_name}"
-  db_password    = substr(replace(uuid(), "-", ""), 0, 24)
-  db_root_pass   = replace(uuid(), "-", "")
 
   tags = merge(var.COMMON_TAGS, {
     ResourceType = "APPLICATION"
@@ -279,38 +277,6 @@ resource "aws_cloudwatch_log_group" "redis" {
   tags = local.tags
 }
 
-resource "aws_secretsmanager_secret" "db_password" {
-  name                    = "${var.RESOURCE_PREFIX}/mysql/app-password"
-  recovery_window_in_days = 0
-
-  tags = local.tags
-}
-
-resource "aws_secretsmanager_secret_version" "db_password" {
-  secret_id     = aws_secretsmanager_secret.db_password.id
-  secret_string = local.db_password
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
-
-resource "aws_secretsmanager_secret" "db_root_password" {
-  name                    = "${var.RESOURCE_PREFIX}/mysql/root-password"
-  recovery_window_in_days = 0
-
-  tags = local.tags
-}
-
-resource "aws_secretsmanager_secret_version" "db_root_password" {
-  secret_id     = aws_secretsmanager_secret.db_root_password.id
-  secret_string = local.db_root_pass
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
-
 resource "aws_iam_role" "ecs_task_execution" {
   name               = "${var.RESOURCE_PREFIX}-ecs-execution"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
@@ -321,27 +287,6 @@ resource "aws_iam_role" "ecs_task_execution" {
 resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   role       = aws_iam_role.ecs_task_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
-  name = "${var.RESOURCE_PREFIX}-ecs-secrets"
-  role = aws_iam_role.ecs_task_execution.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = [
-          aws_secretsmanager_secret.db_password.arn,
-          aws_secretsmanager_secret.db_root_password.arn
-        ]
-      }
-    ]
-  })
 }
 
 resource "aws_ecs_task_definition" "app" {
@@ -389,12 +334,10 @@ resource "aws_ecs_task_definition" "app" {
         {
           name  = "REDIS_PORT"
           value = "6379"
-        }
-      ]
-      secrets = [
+        },
         {
-          name      = "DB_PASS"
-          valueFrom = aws_secretsmanager_secret.db_password.arn
+          name  = "DB_PASS"
+          value = var.database_password
         }
       ]
       logConfiguration = {
@@ -407,8 +350,6 @@ resource "aws_ecs_task_definition" "app" {
       }
     }
   ])
-
-  depends_on = [aws_secretsmanager_secret_version.db_password]
 
   tags = local.tags
 }
@@ -446,16 +387,14 @@ resource "aws_ecs_task_definition" "mysql" {
         {
           name  = "MYSQL_USER"
           value = var.database_user
-        }
-      ]
-      secrets = [
-        {
-          name      = "MYSQL_PASSWORD"
-          valueFrom = aws_secretsmanager_secret.db_password.arn
         },
         {
-          name      = "MYSQL_ROOT_PASSWORD"
-          valueFrom = aws_secretsmanager_secret.db_root_password.arn
+          name  = "MYSQL_PASSWORD"
+          value = var.database_password
+        },
+        {
+          name  = "MYSQL_ROOT_PASSWORD"
+          value = var.database_root_password
         }
       ]
       logConfiguration = {
@@ -468,11 +407,6 @@ resource "aws_ecs_task_definition" "mysql" {
       }
     }
   ])
-
-  depends_on = [
-    aws_secretsmanager_secret_version.db_password,
-    aws_secretsmanager_secret_version.db_root_password
-  ]
 
   tags = local.tags
 }

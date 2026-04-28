@@ -13,7 +13,7 @@ Terraform infrastructure for the KoRo PHP visit logger coding test. The stack ru
 - AWS Cloud Map private DNS names for service discovery:
   - `mysql.<env>-db-checker.local`
   - `redis.<env>-db-checker.local`
-- AWS Secrets Manager stores generated MySQL passwords.
+- MySQL credentials are passed as plain ECS environment variables for this exercise.
 - CloudWatch Logs collects app, MySQL, and Redis container logs.
 
 MySQL and Redis are intentionally ephemeral in this practical deployment. Task replacement recreates their container filesystems and loses stored visit data. See [design.md](design.md) for the production HA proposal.
