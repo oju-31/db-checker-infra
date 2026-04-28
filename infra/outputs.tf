@@ -1,7 +1,7 @@
-output "test_bucket_name" {
-  value = aws_s3_bucket.test.bucket
+output "application_url" {
+  value = "http://${aws_lb.app.dns_name}"
 }
 
-output "test_bucket_arn" {
-  value = aws_s3_bucket.test.arn
+output "alb_dns_name" {
+  value = aws_lb.app.dns_name
 }

@@ -1,75 +1,65 @@
 # db-checker-infra
 
+Terraform infrastructure for the KoRo PHP visit logger coding test. The stack runs the provided PHP image on ECS Fargate with three replicas behind an Application Load Balancer, plus single-node MySQL and Redis containers for the data tier.
+
+## Architecture
+
+- Public Application Load Balancer on HTTP port `80`.
+- ECS Fargate cluster with:
+  - PHP app service, desired count `3`, image `ghcr.io/korohandelsgmbh/coding-test-2025:latest`.
+  - MySQL service, desired count `1`, image `mysql:8`.
+  - Redis service, desired count `1`, image `redis:7`.
+- Public subnets across two Availability Zones.
+- AWS Cloud Map private DNS names for service discovery:
+  - `mysql.<env>-db-checker.local`
+  - `redis.<env>-db-checker.local`
+- AWS Secrets Manager stores generated MySQL passwords.
+- CloudWatch Logs collects app, MySQL, and Redis container logs.
+
+MySQL and Redis are intentionally ephemeral in this practical deployment. Task replacement recreates their container filesystems and loses stored visit data. See [design.md](design.md) for the production HA proposal.
+
 ## Prerequisites
 
-Before running Terraform locally or through GitHub Actions, make sure the items below are in place.
+- Terraform.
+- AWS CLI credentials for local deployment.
+- Existing S3 backend buckets:
+  - Dev: `db-checker-backend-aws-terraform-remote-state-centralized`
+  - Prod: `db-checker-aws-terraform-remote-state-centralized`
+- GitHub Actions OIDC roles for CI/CD.
 
-### AWS remote state
+The backend region and deployment region are both `us-east-2`.
 
-Create the Terraform state backend resources before the first deploy:
+## GitHub Actions Setup
 
-- Dev S3 bucket: `db-checker-backend-aws-terraform-remote-state-centralized`
-- Prod S3 bucket: `db-checker-aws-terraform-remote-state-centralized`
-- Backend region: `us-east-2`
+Create GitHub environments named `dev` and `prod`.
 
-State locking with DynamoDB is currently commented out in `config/backend-dev.hcl` and `config/backend-prod.hcl`. If you re-enable it later, create the DynamoDB lock table with `LockID` as the partition key and give the deploy role read/write access to it.
+Add these environment secrets:
 
-### AWS deployment accounts
+- `GA_ROLE_ARN_DEV` in the `dev` environment.
+- `GA_ROLE_ARN_PROD` in the `prod` environment.
 
-For each environment, create or choose an AWS account where Terraform will deploy resources:
+Each role needs permissions to manage the AWS resources in this Terraform stack and access its environment-specific remote state bucket.
 
-- Dev deploys use `config/backend-dev.hcl` and `config/dev.tfvars`.
-- Prod deploys use `config/backend-prod.hcl` and `config/prod.tfvars`.
-- The AWS credentials active when Terraform runs determine which account receives the deployment.
+The workflows run:
 
-If state is centralized in a different AWS account from dev/prod, each deploy role must also have cross-account access to the remote state bucket.
+- `terraform fmt -check -recursive`
+- `terraform validate`
+- `terraform plan`
+- `terraform apply` on branch pushes only
 
-### GitHub Actions OIDC
+`dev` deploys from the `dev` branch with `config/dev.tfvars`.
 
-Configure GitHub OIDC access in AWS for each target account:
+`prod` deploys from the `main` branch with `config/prod.tfvars`.
 
-- Add the GitHub Actions OIDC provider in AWS IAM.
-- Create a dev deployment role trusted by the GitHub repo/branch or GitHub environment.
-- Create a prod deployment role trusted by the GitHub repo/branch or GitHub environment.
-- Give each role permission to manage the Terraform resources in that account.
-- Give each role permission to access the remote state S3 bucket.
+## Local Deployment
 
-In GitHub, create environments named `dev` and `prod`. Add an environment secret named `GA_ROLE_ARN_DEV` in each environment:
-
-- `dev` should point to the dev AWS OIDC role ARN.
-- `prod` should point to the prod AWS OIDC role ARN.
-
-### Local development
-
-Install these tools locally:
-
-- Terraform
-- AWS CLI
-
-Authenticate to the correct AWS account before running Terraform, for example:
+Authenticate to the target AWS account first:
 
 ```bash
 export AWS_PROFILE=<your-profile>
 ```
 
-Do not commit `.terraform/`, local state files, plans, or `.DS_Store`. Commit `.terraform.lock.hcl` so CI and local runs use consistent provider versions.
-
-### Configuration
-
-Check these files before deployment:
-
-- `config/dev.tfvars` has `ENV = "dev"`.
-- `config/prod.tfvars` has `ENV = "prod"`.
-- `variables.tf` defaults `AWS_REGION` to `us-east-2`.
-- The GitHub workflow `AWS_REGION` values match the Terraform/backend region.
-
-## Deploying environments
-
-Each environment uses its own remote state key and its own `tfvars` file. Reconfigure the backend when switching environments so Terraform reads and writes the correct state file.
-
-For separate AWS accounts, authenticate CI with the environment-specific OIDC role before running Terraform. The assumed role controls which AWS account receives the deployment.
-
-### Dev
+Deploy dev:
 
 ```bash
 terraform init -reconfigure -backend-config=config/backend-dev.hcl
@@ -77,7 +67,7 @@ terraform plan -var-file=config/dev.tfvars
 terraform apply -var-file=config/dev.tfvars
 ```
 
-### Prod
+Deploy prod:
 
 ```bash
 terraform init -reconfigure -backend-config=config/backend-prod.hcl
@@ -85,4 +75,35 @@ terraform plan -var-file=config/prod.tfvars
 terraform apply -var-file=config/prod.tfvars
 ```
 
-For local development, set your AWS credentials outside Terraform, for example with `AWS_PROFILE` in your shell. For CI/CD, assume the environment-specific OIDC role in the pipeline before Terraform runs.
+## Accessing the Application
+
+After apply, Terraform prints:
+
+```bash
+application_url = "http://<alb-dns-name>"
+alb_dns_name    = "<alb-dns-name>"
+```
+
+Open `application_url` in a browser or test it with:
+
+```bash
+curl "$(terraform output -raw application_url)"
+```
+
+## Verification
+
+Useful checks after deployment:
+
+```bash
+terraform output application_url
+aws ecs list-services --cluster <env>-db-checker-cluster
+aws ecs describe-services --cluster <env>-db-checker-cluster --services <env>-db-checker-app <env>-db-checker-mysql <env>-db-checker-redis
+```
+
+Expected service counts:
+
+- App: `3` running tasks.
+- MySQL: `1` running task.
+- Redis: `1` running task.
+
+The ALB target group should show the PHP app tasks as healthy once the containers can connect to MySQL and Redis.

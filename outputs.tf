@@ -1,7 +1,9 @@
-output "test_bucket_name" {
-  value = module.infra.test_bucket_name
+output "application_url" {
+  description = "HTTP URL for the PHP application."
+  value       = module.infra.application_url
 }
 
-output "test_bucket_arn" {
-  value = module.infra.test_bucket_arn
+output "alb_dns_name" {
+  description = "DNS name of the public Application Load Balancer."
+  value       = module.infra.alb_dns_name
 }
