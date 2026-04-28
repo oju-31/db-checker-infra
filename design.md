@@ -20,3 +20,4 @@ Implement retries with exponential backoff, short timeouts, connection re-creati
 Tradeoffs
 Managed services offer easier operations, built-in failover, and reliability but add cost and some lock-in. Self-hosting provides control but significantly increases operational complexity.
 
+https://drive.google.com/file/d/10-FBLG6bOlOT5egBPLgwg_RfbkcS-pNx/view?usp=drive_link
