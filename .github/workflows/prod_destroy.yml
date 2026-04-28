@@ -1,0 +1,42 @@
+name: Scheduled Prod Destroy
+
+on:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    name: Destroy Prod
+    runs-on: ubuntu-latest
+    environment: prod
+
+    env:
+      AWS_REGION: us-east-2
+      TF_VERSION: 1.5.0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GA_ROLE_ARN_PROD }}
+          role-session-name: GitHubActionsProdDestroy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -reconfigure -backend-config=config/backend-prod.hcl
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -var-file=config/prod.tfvars
