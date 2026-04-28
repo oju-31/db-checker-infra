@@ -20,12 +20,12 @@ The stack runs the provided PHP image on ECS Fargate with three replicas behind 
 
 - Existing S3 backend buckets (no dynamodb for now):
   - Prod: `db-checker-aws-terraform-remote-state-centralized` 
-- GitHub Actions OIDC roles for CI/CD.
+- GitHub Actions OIDC roles for CI/CD. Make sure it has the following permissions:
 
 The backend region and deployment region are both `us-east-2`.
 
 ## GitHub Actions Setup
-Create 
+Create these Actions secrets in repo in the repo, one is enough for testing.
 
 - `GA_ROLE_ARN_DEV` in the `dev` environment.
 - `GA_ROLE_ARN_PROD` in the `prod` environment.
@@ -47,9 +47,6 @@ The workflows run:
 
 Authenticate to the target AWS account first:
 
-```bash
-export AWS_PROFILE=<your-profile>
-```
 
 Deploy dev:
 
