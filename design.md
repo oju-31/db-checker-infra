@@ -8,10 +8,10 @@ Self-Hosted on Kubernetes (When Necessary)
 Run MySQL and Redis inside a Kubernetes cluster (e.g., on Amazon EKS or self-managed Kubernetes on EC2).
 
 MySQL:
-Deploy via StatefulSets with persistent volumes (EBS). Use operators like Percona XtraDB Cluster Operator or Vitess for replication, failover, and scaling.
-Ensure backups (Velero or snapshots), monitoring, and controlled failover.
+Deploy via StatefulSets with persistent volumes (EBS). Use operators like Vitess for replication, failover, and scaling.
+Ensure backups (snapshots), monitoring, and controlled failover.
 Redis:
-Deploy using StatefulSets with Redis Sentinel or Redis Cluster. Tools like Redis Operator can automate failover and scaling.
+Deploy using StatefulSets with Redis Cluster. Tools like Redis Operator can automate failover and scaling.
 Use persistent volumes if durability is required.
 
 Application Changes
