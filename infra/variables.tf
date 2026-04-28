@@ -32,7 +32,7 @@ variable "app_container_port" {
 
 variable "mysql_image" {
   type    = string
-  default = "mysql:8"
+  default = "mysql:8.0"
 }
 
 variable "redis_image" {

@@ -178,7 +178,7 @@ resource "aws_lb_target_group" "app" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    matcher             = "200-399"
+    matcher             = "200-499"
     path                = "/"
     protocol            = "HTTP"
     timeout             = 5
@@ -299,7 +299,7 @@ resource "aws_ecs_task_definition" "app" {
 
   runtime_platform {
     operating_system_family = "LINUX"
-    cpu_architecture        = "X86_64"
+    cpu_architecture        = "ARM64"
   }
 
   container_definitions = jsonencode([
@@ -372,6 +372,7 @@ resource "aws_ecs_task_definition" "mysql" {
       name      = "mysql"
       image     = var.mysql_image
       essential = true
+      command   = ["mysqld", "--default-authentication-plugin=mysql_native_password"]
       portMappings = [
         {
           containerPort = 3306
@@ -493,11 +494,12 @@ resource "aws_ecs_service" "redis" {
 }
 
 resource "aws_ecs_service" "app" {
-  name            = "${var.RESOURCE_PREFIX}-app"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = var.app_desired_count
-  launch_type     = "FARGATE"
+  name                              = "${var.RESOURCE_PREFIX}-app"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.app.arn
+  desired_count                     = var.app_desired_count
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 120
 
   network_configuration {
     assign_public_ip = true
