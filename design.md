@@ -1,12 +1,18 @@
-Move from a single-node ECS setup to a highly available AWS architecture using managed services for MySQL and Redis to reduce operational overhead and improve reliability.
+Move from a single-node ECS setup to a highly available AWS architecture using managed services for MySQL and Redis to reduce operational overhead.
 
 Managed AWS (Preferred)
 Use Amazon RDS/Aurora (Multi-AZ) for MySQL with automated backups, failover, and monitoring. Applications should handle transient disconnects with retries and short timeouts.
 Use ElastiCache for Redis with Multi-AZ replication and automatic failover. Configure persistence based on data criticality, and ensure the app reconnects after failures.
 
-Self-Hosted (When Necessary)
-Run MySQL on EC2 with replication and external failover tooling (e.g., Orchestrator, ProxySQL). Use EBS, snapshots, and strict monitoring.
-Run Redis with Sentinel or Cluster, ensuring quorum-based failover and persistence if needed. Clients must handle topology changes and failover events.
+Self-Hosted on Kubernetes (When Necessary)
+Run MySQL and Redis inside a Kubernetes cluster (e.g., on Amazon EKS or self-managed Kubernetes on EC2).
+
+MySQL:
+Deploy via StatefulSets with persistent volumes (EBS). Use operators like Percona XtraDB Cluster Operator or Vitess for replication, failover, and scaling.
+Ensure backups (Velero or snapshots), monitoring, and controlled failover.
+Redis:
+Deploy using StatefulSets with Redis Sentinel or Redis Cluster. Tools like Redis Operator can automate failover and scaling.
+Use persistent volumes if durability is required.
 
 Application Changes
 Implement retries with exponential backoff, short timeouts, connection re-creation, and idempotent operations. Avoid long transactions and log degraded dependencies.
