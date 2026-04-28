@@ -21,3 +21,4 @@ Tradeoffs
 Managed services offer easier operations, built-in failover, and reliability but add cost and some lock-in. Self-hosting provides control but significantly increases operational complexity.
 
 https://drive.google.com/file/d/10-FBLG6bOlOT5egBPLgwg_RfbkcS-pNx/view?usp=drive_link
+![Architecture Diagram](images/db-checker-arch.png)
