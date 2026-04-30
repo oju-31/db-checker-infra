@@ -66,9 +66,8 @@ The ALB target group should show the PHP app tasks as healthy once the container
 The backend region and deployment region are both `us-east-2`.
 
 ## GitHub Actions Setup
-Create these Actions secrets in repo, the value should be the arn of ,
+Create this Actions secret in repo, the value should be the arn of ,
 - GitHub Actions OIDC roles in your AWS account for CI/CD, not needed if you want to run from your local machine.
-
 
 - `GA_ROLE_ARN_PROD` in the `prod` environment.
 
