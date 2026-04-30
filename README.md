@@ -53,6 +53,9 @@ After apply, Terraform prints:
 application_url = "http://<alb-dns-name>"
 alb_dns_name    = "<alb-dns-name>"
 ```
+- [Application screenshot](images/Screenshot-app.png)
+
+![Application screenshot](images/Screenshot-app.png)
 
 Open `application_url` in a browser or test it with:
 
@@ -129,3 +132,4 @@ The workflows run:
   - `redis.<env>-db-checker.local`
 - MySQL credentials are passed as plain ECS environment variables for this exercise.
 - CloudWatch Logs collects app, MySQL, and Redis container logs.
+- Suggested improvements: [Design notes](design.md)
