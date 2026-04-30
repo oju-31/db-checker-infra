@@ -30,7 +30,7 @@ terraform plan -var-file=config/prod.tfvars
 terraform apply -var-file=config/prod.tfvars
 ```
 
-## Accessing the Application
+### Accessing the Application
 
 After apply, Terraform prints:
 
@@ -45,7 +45,7 @@ Open `application_url` in a browser or test it with:
 curl "$(terraform output -raw application_url)"
 ```
 
-## Verification
+### Verification
 
 Useful checks after deployment:
 
