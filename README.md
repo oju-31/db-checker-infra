@@ -30,6 +30,21 @@ terraform plan -var-file=config/prod.tfvars
 terraform apply -var-file=config/prod.tfvars
 ```
 
+Cleanup local deployment:
+
+```bash
+BACKEND_BUCKET="$(awk -F'"' '/bucket/ { print $2; exit }' config/backend-prod.hcl)"
+
+terraform destroy -var-file=config/prod.tfvars
+
+aws s3 rm "s3://${BACKEND_BUCKET}" --recursive
+aws s3api delete-bucket \
+  --bucket "$BACKEND_BUCKET" \
+  --region us-east-2
+```
+
+GitHub Actions runners clean up their temporary workspace automatically after each run, so this local cleanup command is only needed when you deploy from your machine.
+
 ### Accessing the Application
 
 After apply, Terraform prints:
@@ -66,89 +81,31 @@ The ALB target group should show the PHP app tasks as healthy once the container
 The backend region and deployment region are both `us-east-2`.
 
 ## GitHub Actions Setup
-Create this Actions secret in repo, the value should be the arn of ,
-- GitHub Actions OIDC roles in your AWS account for CI/CD, not needed if you want to run from your local machine.
-
-- `GA_ROLE_ARN_PROD` in the `prod` environment.
-
-Each role needs permissions to manage the AWS resources in this Terraform stack and access its environment-specific remote state key. Attach a policy like this to both roles, replacing `<account-id>` and keeping the matching `dev` or `prod` state key for each environment:
+- Create a GitHub Actions OIDC role in your AWS account for CI/CD. Attach this conservative first-run policy to the role. It is intentionally broad so Terraform can create, update, and delete the required resources without needing account-specific ARNs in the policy:
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "TerraformRemoteState",
-      "Effect": "Allow",
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetBucketLocation"
-      ],
-      "Resource": "arn:aws:s3:::db-checker-backend-aws-terraform-remote-state-centralized"
-    },
-    {
-      "Sid": "TerraformRemoteStateObjects",
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::db-checker-backend-aws-terraform-remote-state-centralized/db-checker-infra/dev/terraform.tfstate",
-        "arn:aws:s3:::db-checker-backend-aws-terraform-remote-state-centralized/db-checker-infra/prod/terraform.tfstate"
-      ]
-    },
-    {
-      "Sid": "ManageStackResources",
+      "Sid": "TerraformFirstRunAccess",
       "Effect": "Allow",
       "Action": [
         "ec2:*",
         "elasticloadbalancing:*",
         "ecs:*",
         "servicediscovery:*",
-        "logs:*"
+        "logs:*",
+        "iam:*",
+        "s3:*",
+        "sts:GetCallerIdentity"
       ],
-      "Resource": "*"
-    },
-    {
-      "Sid": "ManageTerraformIamResources",
-      "Effect": "Allow",
-      "Action": [
-        "iam:CreateRole",
-        "iam:DeleteRole",
-        "iam:GetRole",
-        "iam:ListRolePolicies",
-        "iam:ListAttachedRolePolicies",
-        "iam:PutRolePolicy",
-        "iam:DeleteRolePolicy",
-        "iam:AttachRolePolicy",
-        "iam:DetachRolePolicy",
-        "iam:TagRole",
-        "iam:UntagRole",
-        "iam:PassRole"
-      ],
-      "Resource": [
-        "arn:aws:iam::<account-id>:role/dev-db-checker-ecs-execution",
-        "arn:aws:iam::<account-id>:role/prod-db-checker-ecs-execution"
-      ]
-    },
-    {
-      "Sid": "CreateAwsServiceLinkedRoles",
-      "Effect": "Allow",
-      "Action": "iam:CreateServiceLinkedRole",
-      "Resource": "*"
-    },
-    {
-      "Sid": "TerraformAccountLookup",
-      "Effect": "Allow",
-      "Action": "sts:GetCallerIdentity",
       "Resource": "*"
     }
   ]
 }
 ```
-
+- Create Actions secret in this repo named `GA_ROLE_ARN_PROD` , the value should be the arn of the GitHub Actions OIDC role.
 The workflows run:
 
 - `terraform fmt -check -recursive`
