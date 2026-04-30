@@ -8,18 +8,18 @@ Though this repo is designed for account level separation for each environment, 
 
 Authenticate to the target AWS account first:
 
-- Create s3 bucket and Update the `bucket` value in [config/backend-dev.hcl](config/backend-dev.hcl) to the bucket name:
+- Create s3 bucket and Update the `bucket` value in [config/backend-prod.hcl](config/backend-prod.hcl) to the bucket name:
 
 ```bash
 RANDOM_SUFFIX="$(date +%s)"
-BACKEND_BUCKET="db-checker-backend-terraform-remote-state-centralized-${RANDOM_SUFFIX}"
+BACKEND_BUCKET="db-checker-tf-state-${RANDOM_SUFFIX}"
 
 aws s3api create-bucket \
   --bucket "$BACKEND_BUCKET" \
   --region us-east-2 \
   --create-bucket-configuration LocationConstraint=us-east-2
 
-perl -0pi -e 's/bucket\s*=\s*"[^"]+"/bucket         = "'"$BACKEND_BUCKET"'"/' config/backend-dev.hcl
+perl -0pi -e 's/bucket\s*=\s*"[^"]+"/bucket         = "'"$BACKEND_BUCKET"'"/' config/backend-prod.hcl
 ```
 
 Deploy prod:
